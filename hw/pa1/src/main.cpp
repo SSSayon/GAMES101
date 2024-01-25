@@ -21,11 +21,15 @@ Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos)
 
 Eigen::Matrix4f get_model_matrix(float rotation_angle)
 {
-    Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
-
-    // TODO: Implement this function
     // Create the model matrix for rotating the triangle around the Z axis.
     // Then return it.
+    float angle = rotation_angle / 180.f * MY_PI;
+    Eigen::Matrix4f model {
+        {cos(angle), -sin(angle), 0, 0},
+        {sin(angle), cos(angle), 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1},
+    };
 
     return model;
 }
@@ -33,15 +37,35 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
                                       float zNear, float zFar)
 {
-    // Students will implement this function
 
-    Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
-
-    // TODO: Implement this function
     // Create the projection matrix for the given parameters.
     // Then return it.
 
-    return projection;
+    zNear = -zNear;
+    zFar = -zFar;   // negative zNear&zFar implies that the camera looks towards -z
+
+    Eigen::Matrix4f persp_to_ortho {
+        {zNear, 0, 0, 0},
+        {0, zNear, 0, 0},
+        {0, 0, zNear+zFar, -zNear*zFar},
+        {0, 0, 1, 0},    
+    };
+
+    float t = tan(eye_fov/2) * abs(zNear);
+    float r = aspect_ratio * t;
+    Eigen::Matrix4f ortho = Eigen::Matrix4f {
+                                {1.f/r, 0, 0, 0},
+                                {0, 1.f/t, 0, 0},
+                                {0, 0, 2.f/(zNear-zFar), 0},
+                                {0, 0, 0, 1},
+                            } * Eigen::Matrix4f {
+                                {1, 0, 0, 0},
+                                {0, 1, 0, 0},
+                                {0, 0, 1, -(zNear+zFar)/2.f},
+                                {0, 0, 0, 1},                                
+                            };
+
+    return ortho * persp_to_ortho;
 }
 
 int main(int argc, const char** argv)
@@ -56,8 +80,6 @@ int main(int argc, const char** argv)
         if (argc == 4) {
             filename = std::string(argv[3]);
         }
-        else
-            return 0;
     }
 
     rst::rasterizer r(700, 700);
