@@ -39,10 +39,22 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
     return Vector4f(v3.x(), v3.y(), v3.z(), w);
 }
 
+inline static bool not_left_handed(float x, float y, const Vector3f& v1, const Vector3f& v2) {
+    return (v2.x() - v1.x()) * (y - v1.y()) - ((x - v1.x()) * (v2.y() - v1.y())) < 0.f;
+} 
 
-static bool insideTriangle(int x, int y, const Vector3f* _v)
+static bool insideTriangle(float x, float y, const Vector3f* v)
 {   
-    // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+    // check if the point (x, y) is inside the triangle represented by v[0], v[1], v[2]
+    // assume v[0], v[1], v[2] are counter-clockwise
+    if (not_left_handed(x, y, v[0], v[1])) {
+        return false;
+    } else if (not_left_handed(x, y, v[1], v[2])) {
+        return false;
+    } else if (not_left_handed(x, y, v[2], v[0])) {
+        return false;
+    }
+    return true;
 }
 
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f* v)
@@ -106,16 +118,42 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
 void rst::rasterizer::rasterize_triangle(const Triangle& t) {
     auto v = t.toVector4();
     
-    // TODO : Find out the bounding box of current triangle.
+    // Find out the bounding box of current triangle,
     // iterate through the pixel and find if the current pixel is inside the triangle
+    
+    float L = std::min(t.v[0].x(), std::min(t.v[1].x(), t.v[2].x()));
+    float R = std::max(t.v[0].x(), std::max(t.v[1].x(), t.v[2].x()));
+    float T = std::min(t.v[0].y(), std::min(t.v[1].y(), t.v[2].y()));
+    float B = std::max(t.v[0].y(), std::max(t.v[1].y(), t.v[2].y()));
 
-    // If so, use the following code to get the interpolated z value.
-    //auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-    //float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-    //float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-    //z_interpolated *= w_reciprocal;
+    float dx[4] = {0.25f, 0.25f, 0.75f, 0.75f};
+    float dy[4] = {0.25f, 0.75f, 0.25f, 0.75f};
 
-    // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+    for (int x = (int)L; x <= (int)R; ++x) {
+        for (int y = (int)T; y <= (int)B; ++y) {
+            int cnt = 0;
+            for (int i = 0; i < 4; ++i) {
+                float xx = x + dx[i];
+                float yy = y + dy[i];
+
+                if (insideTriangle(xx, yy, t.v)) {
+                    auto[alpha, beta, gamma] = computeBarycentric2D(xx, yy, t.v);
+                    float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                    float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                    z_interpolated *= w_reciprocal;
+
+                    if (z_interpolated < depth_buf[get_super_sampled_index(x, y, i)]) {
+                        depth_buf[get_super_sampled_index(x, y, i)] = z_interpolated;
+                        cnt += 1;
+                    }
+                }
+            }
+
+            if (!cnt) continue;
+            set_pixel(Eigen::Vector3f(x, y, 0.f), t.getColor() * cnt / 4.f + frame_buf[get_index(x, y)] * (4 - cnt) / 4.f);
+        }
+    }
+
 }
 
 void rst::rasterizer::set_model(const Eigen::Matrix4f& m)
@@ -148,12 +186,16 @@ void rst::rasterizer::clear(rst::Buffers buff)
 rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
 {
     frame_buf.resize(w * h);
-    depth_buf.resize(w * h);
+    depth_buf.resize(w * h * 4);
 }
 
-int rst::rasterizer::get_index(int x, int y)
+inline int rst::rasterizer::get_index(int x, int y)
 {
     return (height-1-y)*width + x;
+}
+
+inline int rst::rasterizer::get_super_sampled_index(int x, int y, int index) {
+    return get_index(x, y) * 4 + index;
 }
 
 void rst::rasterizer::set_pixel(const Eigen::Vector3f& point, const Eigen::Vector3f& color)

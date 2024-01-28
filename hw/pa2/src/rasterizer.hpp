@@ -93,7 +93,8 @@ namespace rst
         std::vector<Eigen::Vector3f> frame_buf;
 
         std::vector<float> depth_buf;
-        int get_index(int x, int y);
+        inline int get_index(int x, int y);
+        inline int get_super_sampled_index(int x, int y, int index);
 
         int width, height;
 
