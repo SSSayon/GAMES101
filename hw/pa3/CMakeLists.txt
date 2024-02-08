@@ -10,8 +10,6 @@ set(SRC_LIST
     src/main.cpp
     src/rasterizer.cpp
     src/Triangle.cpp
-    src/Texture.cpp
-    src/OBJ_Loader.h
 )
 add_executable(Rasterizer ${SRC_LIST})
 target_link_libraries(Rasterizer ${OpenCV_LIBRARIES})
