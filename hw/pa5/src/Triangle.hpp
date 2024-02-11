@@ -1,17 +1,43 @@
 #pragma once
 
 #include "Object.hpp"
+#include "Vector.hpp"
 
 #include <cstring>
+#include <memory>
 
 bool rayTriangleIntersect(const Vector3f& v0, const Vector3f& v1, const Vector3f& v2, const Vector3f& orig,
                           const Vector3f& dir, float& tnear, float& u, float& v)
 {
-    // TODO: Implement this function that tests whether the triangle
-    // that's specified bt v0, v1 and v2 intersects with the ray (whose
-    // origin is *orig* and direction is *dir*)
-    // Also don't forget to update tnear, u and v.
-    return false;
+    // test whether the triangle specified by v0, v1 and v2 intersects with the ray 
+    // (whose origin is *orig* and direction is *dir*)
+    const float EPS = std::numeric_limits<float>::epsilon();
+
+    Vector3f e1 = v1 - v0;
+    Vector3f e2 = v2 - v0;
+
+    Vector3f s1 = crossProduct(dir, e2);
+    float det = dotProduct(s1, e1);
+
+    if (det > -EPS && det < EPS) {  // ray parellel to the triangle
+        return false;
+    }
+
+    float inv_det = 1.f / det;
+    Vector3f s = orig - v0;
+
+    u = dotProduct(s1, s) * inv_det;
+    if (u < 0.f || u > 1.f) {
+        return false;
+    }
+    Vector3f s2 = crossProduct(s, e1);
+    v = dotProduct(s2, dir) * inv_det;
+    if (v < 0.f || v + u > 1.f) {
+        return false;
+    }
+
+    tnear = dotProduct(s2, e2) * inv_det;
+    return tnear > EPS;
 }
 
 class MeshTriangle : public Object
