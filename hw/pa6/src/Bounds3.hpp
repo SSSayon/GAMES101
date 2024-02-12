@@ -6,6 +6,7 @@
 #define RAYTRACING_BOUNDS3_H
 #include "Ray.hpp"
 #include "Vector.hpp"
+#include <cmath>
 #include <limits>
 #include <array>
 
@@ -27,7 +28,7 @@ class Bounds3
         pMax = Vector3f(fmax(p1.x, p2.x), fmax(p1.y, p2.y), fmax(p1.z, p2.z));
     }
 
-    Vector3f Diagonal() const { return pMax - pMin; }
+    inline Vector3f Diagonal() const { return pMax - pMin; }
     int maxExtent() const
     {
         Vector3f d = Diagonal();
@@ -94,9 +95,32 @@ inline bool Bounds3::IntersectP(const Ray& ray, const Vector3f& invDir,
                                 const std::array<int, 3>& dirIsNeg) const
 {
     // invDir: ray direction(x,y,z), invDir=(1.0/x,1.0/y,1.0/z), use this because Multiply is faster that Division
-    // dirIsNeg: ray direction(x,y,z), dirIsNeg=[int(x>0),int(y>0),int(z>0)], use this to simplify your logic
-    // TODO test if ray bound intersects
-    
+    // dirIsNeg: ray direction(x,y,z), dirIsNeg=[int(x<0),int(y<0),int(z<0)], use this to simplify your logic
+    // test if ray bound intersects
+    float tMin = ((*this)[dirIsNeg[0]].x - ray.origin.x) * invDir.x;
+    float tMax = ((*this)[1 - dirIsNeg[0]].x - ray.origin.x) * invDir.x;
+
+    float tMinY = ((*this)[dirIsNeg[1]].y - ray.origin.y) * invDir.y;
+    float tMaxY = ((*this)[1 - dirIsNeg[1]].y - ray.origin.y) * invDir.y;
+
+    if ((tMin > tMaxY) || (tMax < tMinY)) {
+        return false;
+    }
+
+    tMin = std::fmax(tMin, tMinY);
+    tMax = std::fmin(tMax, tMaxY);
+
+    float tMinZ = ((*this)[dirIsNeg[2]].z - ray.origin.z) * invDir.z;
+    float tMaxZ = ((*this)[1 - dirIsNeg[2]].z - ray.origin.z) * invDir.z;
+
+    if ((tMin > tMaxZ) || (tMax < tMinZ)) {
+        return false;
+    }
+
+    tMin = std::fmax(tMin, tMinZ);
+    tMax = std::fmin(tMax, tMaxZ);
+
+    return (tMin < ray.t_max) && (tMax > ray.t_min);
 }
 
 inline Bounds3 Union(const Bounds3& b1, const Bounds3& b2)

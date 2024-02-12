@@ -12,24 +12,23 @@
 int main(int argc, char** argv)
 {
     Scene scene(1280, 960);
+    BVHAccel::SplitMethod splitMethod = BVHAccel::SplitMethod::SAH;
 
-    MeshTriangle bunny("../models/bunny/bunny.obj");
+    MeshTriangle bunny("../src/models/bunny/bunny.obj", splitMethod);
 
     scene.Add(&bunny);
     scene.Add(std::make_unique<Light>(Vector3f(-20, 70, 20), 1));
     scene.Add(std::make_unique<Light>(Vector3f(20, 70, 20), 1));
-    scene.buildBVH();
+    scene.buildBVH(splitMethod);
 
     Renderer r;
 
     auto start = std::chrono::system_clock::now();
-    r.Render(scene);
+    r.Render(scene, splitMethod);
     auto stop = std::chrono::system_clock::now();
 
+    double diff = (stop - start).count();
     std::cout << "Render complete: \n";
-    std::cout << "Time taken: " << std::chrono::duration_cast<std::chrono::hours>(stop - start).count() << " hours\n";
-    std::cout << "          : " << std::chrono::duration_cast<std::chrono::minutes>(stop - start).count() << " minutes\n";
-    std::cout << "          : " << std::chrono::duration_cast<std::chrono::seconds>(stop - start).count() << " seconds\n";
-
+    printf("Time Taken: %f ns\n\n", diff);
     return 0;
 }

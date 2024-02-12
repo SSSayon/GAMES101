@@ -5,10 +5,8 @@
 #ifndef RAYTRACING_BVH_H
 #define RAYTRACING_BVH_H
 
-#include <atomic>
 #include <vector>
 #include <memory>
-#include <ctime>
 #include "Object.hpp"
 #include "Ray.hpp"
 #include "Bounds3.hpp"
@@ -39,10 +37,12 @@ public:
 
     // BVHAccel Private Methods
     BVHBuildNode* recursiveBuild(std::vector<Object*>objects);
+    BVHBuildNode* recursiveBuildSAH(std::vector<Object*>objects);
 
     // BVHAccel Private Data
     const int maxPrimsInNode;
     const SplitMethod splitMethod;
+    const int bucketNum = 8;
     std::vector<Object*> primitives;
 };
 

@@ -75,7 +75,7 @@ public:
 class MeshTriangle : public Object
 {
 public:
-    MeshTriangle(const std::string& filename)
+    MeshTriangle(const std::string& filename, BVHAccel::SplitMethod splitMethod)
     {
         objl::Loader loader;
         loader.LoadFile(filename);
@@ -123,7 +123,7 @@ public:
         for (auto& tri : triangles)
             ptrs.push_back(&tri);
 
-        bvh = new BVHAccel(ptrs);
+        bvh = new BVHAccel(ptrs, 1, splitMethod);
     }
 
     bool intersect(const Ray& ray) { return true; }
@@ -230,11 +230,17 @@ inline Intersection Triangle::getIntersection(Ray ray)
     if (v < 0 || u + v > 1)
         return inter;
     t_tmp = dotProduct(e2, qvec) * det_inv;
+    if (t_tmp < ray.t_min || t_tmp > ray.t_max) {
+        return inter;
+    }
 
-    // TODO find ray triangle intersection
-
-
-
+    // intersected
+    inter.happened = true;
+    inter.coords = ray(t_tmp);
+    inter.normal = normal;
+    inter.distance = t_tmp;
+    inter.obj = this;
+    inter.m = m;
 
     return inter;
 }

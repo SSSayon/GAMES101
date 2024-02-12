@@ -15,7 +15,7 @@ const float EPSILON = 0.00001;
 // The main render function. This where we iterate over all pixels in the image,
 // generate primary rays and cast these rays into the scene. The content of the
 // framebuffer is saved to a file.
-void Renderer::Render(const Scene& scene)
+void Renderer::Render(const Scene& scene, BVHAccel::SplitMethod splitMethod)
 {
     std::vector<Vector3f> framebuffer(scene.width * scene.height);
 
@@ -28,13 +28,17 @@ void Renderer::Render(const Scene& scene)
             // generate primary ray direction
             float x = (2 * (i + 0.5) / (float)scene.width - 1) * imageAspectRatio * scale;
             float y = (1 - 2 * (j + 0.5) / (float)scene.height) * scale;
+
+            Vector3f dir = normalize(Vector3f(x, y, -1));   
+            framebuffer[m++] = scene.castRay(Ray(eye_pos, dir), 0);
         }
         UpdateProgress(j / (float)scene.height);
     }
     UpdateProgress(1.f);
 
     // save framebuffer to file
-    FILE* fp = fopen("binary.ppm", "wb");
+    auto filename = (splitMethod == BVHAccel::SplitMethod::SAH) ? "binary_SAH.ppm" : "binary.ppm";
+    FILE* fp = fopen(filename, "wb");
     (void)fprintf(fp, "P6\n%d %d\n255\n", scene.width, scene.height);
     for (auto i = 0; i < scene.height * scene.width; ++i) {
         static unsigned char color[3];
