@@ -82,7 +82,9 @@ public:
         Vector3f dir(std::cos(phi), std::sin(phi)*std::cos(theta), std::sin(phi)*std::sin(theta));
         pos.coords = center + radius * dir;
         pos.normal = dir;
-        pos.emit = m->getEmission();
+        pos.emit = m->m_emission;
+        pos.obj = this;
+        pos.m = m;
         pdf = 1.0f / area;
     }
     float getArea(){
