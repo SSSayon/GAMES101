@@ -88,6 +88,7 @@ Vector3f Scene::castRay(const Ray &ray) const {  // Ray.direction is always norm
     if (get_random_float() < RussianRoulette) {
         Vector3f wi = isect.m->sample(-ray.direction, isect.normal).normalized();
         if (dotProduct(isect.normal, wi) > 0.f) {
+        // if (dotProduct(isect.normal, wi) > 0.f && dotProduct(isect.normal, -ray.direction) > 0.f) {
             Intersection ray_to_obj = intersect(Ray(p, wi));
             if (ray_to_obj.happened && !ray_to_obj.m->hasEmission()) {  // ray cast to a non-emitting obj
                 L_indir = castRay(Ray(p, wi)) * isect.m->eval(-ray.direction, wi, isect.normal)

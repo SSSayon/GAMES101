@@ -8,7 +8,7 @@
 #include "Vector.hpp"
 #include "global.hpp"
 
-enum MaterialType { DIFFUSE};
+enum MaterialType { DIFFUSE, MICROFACET };
 
 class Material{
 private:
@@ -88,12 +88,14 @@ private:
 
 public:
     MaterialType m_type;
-    //Vector3f m_color;
+    Vector3f m_color;
     Vector3f m_emission;
-    float ior;
-    Vector3f Kd, Ks;
-    float specularExponent;
+    // float ior;
+    float Kd;
+    // float specularExponent;
     //Texture tex;
+    float alpha;
+    Vector3f F0;
 
     inline Material(MaterialType t=DIFFUSE, Vector3f e=Vector3f(0,0,0));
     inline MaterialType getType();
@@ -133,6 +135,7 @@ Vector3f Material::getColorAt(double u, double v) {
 Vector3f Material::sample(const Vector3f &wi, const Vector3f &N){
     switch(m_type){
         case DIFFUSE:
+        case MICROFACET:
         {
             // uniform sample on the hemisphere
             float x_1 = get_random_float(), x_2 = get_random_float();
@@ -150,6 +153,7 @@ Vector3f Material::sample(const Vector3f &wi, const Vector3f &N){
 float Material::pdf(const Vector3f &wi, const Vector3f &wo, const Vector3f &N){
     switch(m_type){
         case DIFFUSE:
+        case MICROFACET:
         {
             // uniform sample probability 1 / (2 * PI)
             if (dotProduct(wo, N) > 0.0f)
@@ -169,11 +173,35 @@ Vector3f Material::eval(const Vector3f &wi, const Vector3f &wo, const Vector3f &
             // calculate the contribution of diffuse   model
             float cosalpha = dotProduct(N, wo);
             if (cosalpha > 0.0f) {
-                Vector3f diffuse = Kd / M_PI;
+                Vector3f diffuse = m_color / M_PI;
                 return diffuse;
             }
             else
                 return Vector3f(0.0f);
+            break;
+        }
+        case MICROFACET:
+        {
+            // normal Distribution function, Trowbridge-Reitz GGX
+            Vector3f h = (wi + wo).normalized();
+            float NdotH = std::max(0.f, dotProduct(N, h));
+            float denom = M_PI * (NdotH * NdotH * (alpha * alpha - 1.f) + 1.f)
+                               * (NdotH * NdotH * (alpha * alpha - 1.f) + 1.f);
+            float D = alpha * alpha / denom;
+
+            // Geometry function, Schlick-GGX
+            float k = (alpha + 1.f) * (alpha + 1.f) / 8;
+            float NdotWi = dotProduct(N, wi);
+            float Gi = NdotWi / (NdotWi * (1.f - k) + k);
+            float NdotWo = dotProduct(N, wo);
+            float Go = NdotWo / (NdotWo * (1.f - k) + k);
+            float G = Gi * Go;
+
+            // Fresnel equation
+            Vector3f F = F0 + (Vector3f(1.f) - F0) * std::pow((1 - NdotWi), 5);
+
+            return Kd * m_color / M_PI + (1.f - Kd) * D * G * F / (4.f * NdotWi * NdotWo);
+
             break;
         }
     }
