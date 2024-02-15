@@ -6,7 +6,7 @@ Introduction to Modern Computer Graphics
 > 
 > **PAs**: https://games-cn.org/forums/topic/allhw/
 
-![Cornell Box](cornell.png)
+![Cornell Box](https://github.com/SSSayon/GAMES101/blob/main/cornell.png)
 $\quad$ ^ Cornell box rendered in pa7.
 
 Finished on Feb 15th, 2024.
